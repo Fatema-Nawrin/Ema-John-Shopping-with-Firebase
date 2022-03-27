@@ -41,8 +41,12 @@ const Shop = () => {
         // if it is in cart already
         else {
             const rest = cart.filter(product => product.id !== selectedProduct.id);
+            console.log('r', rest)
+            console.log('e', exists)
             exists.quantity = exists.quantity + 1;
+            console.log('e2', exists)
             newCart = [...rest, exists]
+            console.log('n', newCart);
         }
         setCart(newCart);
         addToDb(selectedProduct.id)
