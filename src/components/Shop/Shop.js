@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import useCart from '../../hooks/useCart';
 import useProducts from '../../hooks/useProducts';
 import { addToDb, getStoredCart } from '../../utilities/fakedb';
 import Cart from '../Cart/Cart';
@@ -7,27 +8,32 @@ import Product from '../Product/Product';
 import './Shop.css'
 
 const Shop = () => {
-    const [products, setProducts] = useProducts();
-    const [cart, setCart] = useState([])
+    const [cart, setCart] = useCart();
+    const [pageCount, setPageCount] = useState(0);
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
+    const [products, setProducts] = useState([]);
 
     useEffect(() => {
-        const storedCart = getStoredCart();
-        const savedCart = [];
-        for (const id in storedCart) {
-            const addedProduct = products.find(product => product.id === id);
-            if (addedProduct) {
-                const quantity = storedCart[id];
-                addedProduct.quantity = quantity;
-                savedCart.push(addedProduct)
-            }
-        }
-        setCart(savedCart)
-    }, [products]);
+        fetch(`http://localhost:5000/product?page=${page}&size=${size}`)
+            .then(res => res.json())
+            .then(data => setProducts(data))
+    }, [page, size])
+    useEffect(() => {
+        fetch('http://localhost:5000/productCount')
+            .then(res => res.json())
+            .then(data => {
+                const count = data.count;
+                const pages = Math.ceil(count / 10);
+                setPageCount(pages);
+            })
+    }, [])
+
 
     const handleAddToCart = (selectedProduct) => {
         // 1st step 
         let newCart = [];
-        const exists = cart.find(product => product.id === selectedProduct.id)
+        const exists = cart.find(product => product._id === selectedProduct._id)
         // if product is not in cart
         if (!exists) {
             selectedProduct.quantity = 1;
@@ -35,7 +41,7 @@ const Shop = () => {
         }
         // if it is in cart already
         else {
-            const rest = cart.filter(product => product.id !== selectedProduct.id);
+            const rest = cart.filter(product => product._id !== selectedProduct._id);
             console.log('r', rest)
             console.log('e', exists)
             exists.quantity = exists.quantity + 1;
@@ -44,16 +50,30 @@ const Shop = () => {
             console.log('n', newCart);
         }
         setCart(newCart);
-        addToDb(selectedProduct.id)
+        addToDb(selectedProduct._id)
     }
     return (
         <div className='shop-container'>
             <div className="products-container">
                 {products.map(product => <Product
-                    key={product.id}
+                    key={product._id}
                     product={product}
                     handleAddToCart={handleAddToCart}>
                 </Product>)}
+                <div className='pagination'>
+                    {
+                        [...Array(pageCount).keys()].map(number => <button
+                            className={page === number ? 'selected' : ''}
+                            onClick={() => setPage(number)}
+                        >{number + 1}</button>)
+                    }
+                    <select onChange={e => setSize(e.target.value)}>
+                        <option value="5">5</option>
+                        <option value="10" selected> 10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
             </div>
             <div className="cart-container">
                 <Cart cart={cart}>
